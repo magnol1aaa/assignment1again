@@ -7,70 +7,137 @@ In particular it contains the utility functions and classes such as:
 - The class that defines the structure of the user data: UsageDetails.
 """
 import json
-
+import sqlite3
+import re
 
 class UsageDetails:
     """Class that allows for easy structuring of userdata"""
-    def __init__(self, call_time, data_used, roaming_bool):
+    def __init__(self, first_name, last_name, 
+                 email_address, call_time, 
+                 data_used, roaming_bool
+                 ):
+        self.first_name = first_name
+        self.last_name = last_name
+        self.email_address = email_address
         self.call_time = call_time
         self.data_used = data_used
         self.roaming_bool = roaming_bool
         
     def __str__(self):
         return(
+            f"Full Name: {self.first_name} {self.last_name}"
+            f"User Email: {self.email_address}"
             f"Call Time: {self.call_time} "
             f"Data Used: {self.data_used} "
             f"Roaming Needed: {self.roaming_bool}"
         )
-    
-def save_to_json(data, file_name, overwrite=None):
-    """
-    This function saves input data to file_name path, it checks whether
-    the input is a dictionary or if its an instance of Usage Details.  
-    If it is an instance of Usage Details it converts it to a dictionary.  
-    """
-    if isinstance(data, dict):
-        data_json = json.dumps(data)
-        try:
-            file = open(file_name)
-        except FileNotFoundError:
-            file = open(file_name, 'w')
-        
-            
-    elif isinstance(data, UsageDetails):
-        save_to_json(vars(data), file_name, overwrite)
 
-        
-def get_input(message, convert=None):
+
+def check_database(data, database):
+    """Check if a file exists, and if theres JSON data inside.
+
+    Args:
+        file_name (string): Name of the file to check.
+
+    Returns:
+        list: List contains success/error message, count of dicts in the file.
     """
-    This function is used to read, verify and convert the user input.
-    You pass the message to the function through the first parameter and then
-    provide what type you wish to convert the input to.  Then it attempts a
-    type conversion and if it fails that means the user input was incorrect.  
-    Which then leads to it re-requesting the input and performing conversion again.
+    if isinstance(data, UsageDetails):
+            database = sqlite3.connect(database)
+            cursor = database.cursor()
+            first_name = data.first_name
+            last_name = data.last_name
+            email_address = data.email_address
+            
+            query = """
+            SELECT id 
+            FROM user_info 
+            WHERE first_name = ? 
+            AND last_name = ? 
+            AND email_address = ?
+            """
+            #print(first_name, last_name, email_address)
+            
+            cursor.execute(query, (first_name, last_name, email_address))
+            results = cursor.fetchone()
+            database.close()
+            return results
+
+def input_int(message) -> int:
+    """Converts input into an integer, repeats if input is incorrect.
+
+    Args:
+        message (string): Message to display for input.
+
+    Returns:
+        int: Returns users input as an integer.
+    """
+    
+    input_valid = None
+    while not input_valid:
+        user_input = input(message)
+        if user_input.isdigit():
+            input_valid = True
+            break
+        else:
+            print(f"{user_input} is not a number.") 
+    return int(user_input)
+
+
+def input_email(message):
+    input_valid = None
+    while not input_valid:
+        email = input(message)
+        if re.match("[^@]+@[^@]+\\.[^@]+", email):
+            input_valid = True
+            break
+        else:
+            print(f"{email} is not a valid email address.")
+            
+    return email
+
+def input_bool(message) -> bool:
+    """Converts yes/no input to a bool, repeats if input is incorrect.
+
+    Args:
+        message (string): Message to display for input.
+
+    Returns:
+        bool: The input returned as a bool.
     """
     approve = ['y', 'yes'] 
     deny = ['n', 'no'] 
     
-    user_input = input(message)
-    if convert == int:
-        try:
-            return int(user_input)
-        except:
-            print(f"{user_input} is not a number.") 
-            get_input(message, convert)
-    elif convert == bool:
+    input_valid = None
+    while not input_valid:
+        user_input = input(message)
         if user_input.lower() in approve:
-            return True
+            input_valid = True
+            input_type = True
         elif user_input.lower() in deny:
-            return False
+            input_valid = True
+            input_type = False
         else:
-            print("Please enter Yes/No or Y/N.")
-            get_input(message, convert)
-        
-        
-            
-            
-            
-        
+            print(f"{user_input} isn't a valid option.")
+    return input_type
     
+
+
+def input_name(message) -> str:
+    input_valid = None
+    while not input_valid:
+        user_input = input(message)
+        if user_input.isalpha():
+            input_valid = True
+    return user_input
+    
+
+def save_data(data, database, exists):
+    database = sqlite3.connect(database)
+    cursor = database.cursor()
+    to_save = []
+    if not exists:
+        if isinstance(data, UsageDetails):
+            for item in vars(data):
+                list.append(to_save, item[0])
+            print(to_save)
