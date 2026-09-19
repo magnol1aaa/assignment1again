@@ -1,10 +1,10 @@
 # Imports
 import sqlite3
 from main_utils import(
-    UsageDetails, check_database, 
+    UsageDetails, user_exists, 
     input_int, input_bool, 
     save_data, input_name,
-    input_email)
+    input_email, init_database)
 
 # Vars
 menu_string = """
@@ -21,22 +21,7 @@ Cooper Gerraty 30487791
 """
 # Initialize Database
 database_name = "plandata"
-database = sqlite3.connect("plandata")
-cursor = database.cursor()
-cursor.execute("CREATE TABLE IF NOT EXISTS user_info "
-               "(id INTEGER PRIMARY KEY AUTOINCREMENT, "
-               "first_name TEXT NOT NULL, "
-               "last_name TEXT NOT NULL, "
-               "email_address VARCHAR NOT NULL UNIQUE)"
-                )
-
-cursor.execute("CREATE TABLE IF NOT EXISTS user_data "
-               "(call_minutes INTEGER NOT NULL, "
-               "data_gigabytes INTEGER NOT NULL, "
-               "needs_roaming INTEGER NOT NULL)"
-               )
-
-database.close()
+init_database(database_name)
 
 
 def option_one():
@@ -44,32 +29,43 @@ def option_one():
 
     first_name = input_name(
             "What is your first name? " 
-            "Enter a number:"
+            "Enter first name: "
             )
 
     last_name = input_name(
             "What is your last name? " 
-            "Enter a number:"
+            "Enter last name: "
             )
 
     email_address = input_email(
             "What is your email address? " 
-            "Enter a number:"
+            "Enter email address:"
             )
-    
+    check = (first_name, last_name, email_address)
+    # TEMP CHECK DB CODE #
+    user_status = user_exists(check, database_name)
+    match user_status:
+        case "Wrong name":
+            print("A user already exists with this email.")
+        case "No user":
+            print("Account created.")
+        case "User has data":
+            print("You already have data.")
+        case _:
+            print("shalom")
     call_time = input_int(
             "How many call minutes do you typically use a month? " 
-            "Enter a number:"
+            "Enter a number: "
             )
 
     data_time = input_int(
         "How many gigabytes of data do you typically use a month? "
-        "Enter a number:"
+        "Enter a number: "
         )
     
     roaming_bool = input_bool(
         "Do you need a plan that offers international roaming? " 
-        "Y(es) / N(o):"
+        "Y(es) / N(o): "
         )
     
     data = UsageDetails(first_name, last_name, 
@@ -77,19 +73,19 @@ def option_one():
                         data_time, roaming_bool)
     
     save_bool = input_bool(
-        "Would you like to save these details?"
-        "Y(es) / N(o):"
+        "Would you like to save these details? "
+        "Y(es) / N(o): "
         )
     
     if not save_bool: menu_function()
     
-    data_exists = check_database(data, database_name)
+    data_exists = user_exists(data, database_name)
     if data_exists:
         do_replacement = None
         while not do_replacement:
             do_replacement = input_bool(
-                "There is pre-existing data, overwrite it?"
-                "Y(es) / N(o)"
+                "There is pre-existing data, overwrite it? "
+                "Y(es) / N(o): "
             )
         if do_replacement:
             save_data(data, database_name, False)

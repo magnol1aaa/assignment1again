@@ -6,7 +6,6 @@ In particular it contains the utility functions and classes such as:
 - Verifying and converting user input: get_input().
 - The class that defines the structure of the user data: UsageDetails.
 """
-import json
 import sqlite3
 import re
 
@@ -33,7 +32,7 @@ class UsageDetails:
         )
 
 
-def check_database(data, database):
+def user_exists(data, database_name) -> str:
     """Check if a file exists, and if theres JSON data inside.
 
     Args:
@@ -42,26 +41,33 @@ def check_database(data, database):
     Returns:
         list: List contains success/error message, count of dicts in the file.
     """
-    if isinstance(data, UsageDetails):
-            database = sqlite3.connect(database)
-            cursor = database.cursor()
-            first_name = data.first_name
-            last_name = data.last_name
-            email_address = data.email_address
-            
-            query = """
-            SELECT id 
-            FROM user_info 
-            WHERE first_name = ? 
-            AND last_name = ? 
-            AND email_address = ?
-            """
-            #print(first_name, last_name, email_address)
-            
-            cursor.execute(query, (first_name, last_name, email_address))
-            results = cursor.fetchone()
-            database.close()
-            return results
+
+    database = sqlite3.connect(database_name)
+    cursor = database.cursor()
+    cursor.execute("SELECT id FROM user_info WHERE email_address = ?", [data[2]])
+    is_user = cursor.fetchone()
+    id = is_user[0]
+    cursor.execute("""SELECT id FROM user_info WHERE first_name = ? AND last_name = ? AND email_address = ?""", data)
+    matches_names = cursor.fetchone()
+    if is_user and matches_names:
+        print("Match voth")
+    if is_user and not matches_names:
+        return "Wrong name"
+    if not is_user and not matches_names:
+        return "No user"
+    
+    print(matches_names)
+    print(is_user)
+    if id:
+        database = sqlite3.connect(database_name)
+        cursor = database.cursor()
+        cursor.execute("SELECT id FROM user_data WHERE id = ?", [id])
+        does_exist = cursor.fetchone()
+        print(does_exist)
+        if does_exist[0] == id:
+            print("user matches and has data already")
+            return "User has data"
+        
 
 def input_int(message) -> int:
     """Converts input into an integer, repeats if input is incorrect.
@@ -131,13 +137,59 @@ def input_name(message) -> str:
             input_valid = True
     return user_input
     
+    
+def init_database(database_name):
+    database = sqlite3.connect(database_name)
+    cursor = database.cursor()
+    cursor.execute("CREATE TABLE IF NOT EXISTS user_info "
+                "(id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                "first_name TEXT NOT NULL, "
+                "last_name TEXT NOT NULL, "
+                "email_address VARCHAR NOT NULL UNIQUE)"
+                    )
 
+    cursor.execute("CREATE TABLE IF NOT EXISTS user_data "
+                "(id INTEGER REFERENCES user_info(id), "
+                "call_minutes INTEGER NOT NULL, "
+                "data_gigabytes INTEGER NOT NULL, "
+                "needs_roaming INTEGER NOT NULL)"
+                )
+    database.commit()
+    database.close()
+    
+    
 def save_data(data, database, exists):
     database = sqlite3.connect(database)
     cursor = database.cursor()
     to_save = []
     if not exists:
         if isinstance(data, UsageDetails):
-            for item in vars(data):
-                list.append(to_save, item[0])
-            print(to_save)
+            variables = vars(data)
+            for key, value in variables.items():
+                to_save.append(value)
+            cursor.execute("""INSERT INTO user_info
+                           (first_name,last_name, email_address)
+                           VALUES (?, ?, ?);
+                           """, 
+                           (data.first_name, data.last_name, 
+                            data.email_address))
+            cursor.execute("""SELECT id FROM user_info WHERE
+                           email_address = ?""", [data.email_address])
+            user_id = cursor.fetchone()
+            print(user_id)
+            cursor.execute("""INSERT INTO user_data
+                           (id, call_minutes, data_gigabytes, 
+                           needs_roaming) VALUES
+                           (?, ?, ?, ?)
+                           """, 
+                           (user_id[0], data.call_time, 
+                            data.data_used,
+                            data.roaming_bool
+                            )
+                           )
+            cursor.execute("SELECT * FROM user_info WHERE email_address = ?", [data.email_address])
+            print(cursor.fetchone())
+            cursor.execute("SELECT * FROM user_data WHERE id = ?", [user_id[0]])
+            print(cursor.fetchone())
+            database.commit()
+            database.close()
