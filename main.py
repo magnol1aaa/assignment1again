@@ -47,12 +47,14 @@ def option_one():
     match user_status:
         case "Wrong name":
             print("A user already exists with this email.")
-        case "No user":
-            print("Account created.")
+            print("Please enter the correct names or use a different email.")
+        case "User created":
+            print("New account.")
         case "User has data":
             print("You already have data.")
         case _:
             print("shalom")
+            print(f"user status: {user_status}")
     call_time = input_int(
             "How many call minutes do you typically use a month? " 
             "Enter a number: "
@@ -79,8 +81,8 @@ def option_one():
     
     if not save_bool: menu_function()
     
-    data_exists = user_exists(data, database_name)
-    if data_exists:
+    user_status = user_exists(data, database_name)
+    if user_status == "User has data":
         do_replacement = None
         while not do_replacement:
             do_replacement = input_bool(
@@ -88,9 +90,12 @@ def option_one():
                 "Y(es) / N(o): "
             )
         if do_replacement:
-            save_data(data, database_name, False)
-    if not data_exists:
+            save_data(data, database_name, True)
+        else:
+            return "Exit"
+    elif user_status == "User has no data":
         save_data(data, database_name, False)
+        
             
 
 def option_two():

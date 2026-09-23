@@ -41,32 +41,51 @@ def user_exists(data, database_name) -> str:
     Returns:
         list: List contains success/error message, count of dicts in the file.
     """
-
+    
+    if isinstance(data, UsageDetails):
+        email_address = data.email_address
+        first_name = data.first_name
+        last_name = data.last_name
+    elif type(data) == tuple:
+        print('istuple')
+        print(data)
+        #(first_name, last_name, email_address)
+        email_address = data[2]
+        first_name = data[0]
+        last_name = data[1]
+        
     database = sqlite3.connect(database_name)
     cursor = database.cursor()
-    cursor.execute("SELECT id FROM user_info WHERE email_address = ?", [data[2]])
-    is_user = cursor.fetchone()
-    id = is_user[0]
-    cursor.execute("""SELECT id FROM user_info WHERE first_name = ? AND last_name = ? AND email_address = ?""", data)
-    matches_names = cursor.fetchone()
-    if is_user and matches_names:
-        print("Match voth")
-    if is_user and not matches_names:
-        return "Wrong name"
-    if not is_user and not matches_names:
-        return "No user"
+
+    id = get_id(data, database_name)
+    is_user = (True if id != -1 else False)
     
-    print(matches_names)
-    print(is_user)
-    if id:
+    matches_names = user_name_match(data,)
+    print(f"FROM USER EXISTS BEFORE IS USER AND MATCH NAMES {id} {is_user} {matches_names}")
+    if is_user and matches_names[0] == id:
         database = sqlite3.connect(database_name)
         cursor = database.cursor()
         cursor.execute("SELECT id FROM user_data WHERE id = ?", [id])
         does_exist = cursor.fetchone()
+        print(f"From is user: {does_exist}")
         print(does_exist)
-        if does_exist[0] == id:
-            print("user matches and has data already")
-            return "User has data"
+        if does_exist:
+            if does_exist == id:
+                print("user matches and has data already")
+                return "User has data"
+        else:
+            return "User has no data"
+    if is_user and not matches_names:
+        return "Wrong name"
+    if not is_user and not matches_names:
+        cursor.execute("""INSERT INTO user_info
+                (first_name,last_name, email_address)
+                VALUES (?, ?, ?);
+                """, 
+                [first_name, last_name, 
+                email_address])
+        database.commit()
+        return "User created"
         
 
 def input_int(message) -> int:
@@ -158,8 +177,8 @@ def init_database(database_name):
     database.close()
     
     
-def save_data(data, database, exists):
-    database = sqlite3.connect(database)
+def save_data(data, database_name, exists):
+    database = sqlite3.connect(database_name)
     cursor = database.cursor()
     to_save = []
     if not exists:
@@ -167,29 +186,72 @@ def save_data(data, database, exists):
             variables = vars(data)
             for key, value in variables.items():
                 to_save.append(value)
-            cursor.execute("""INSERT INTO user_info
-                           (first_name,last_name, email_address)
-                           VALUES (?, ?, ?);
-                           """, 
-                           (data.first_name, data.last_name, 
-                            data.email_address))
-            cursor.execute("""SELECT id FROM user_info WHERE
-                           email_address = ?""", [data.email_address])
-            user_id = cursor.fetchone()
-            print(user_id)
+            user_id = get_id(data, database_name)
             cursor.execute("""INSERT INTO user_data
                            (id, call_minutes, data_gigabytes, 
                            needs_roaming) VALUES
                            (?, ?, ?, ?)
                            """, 
-                           (user_id[0], data.call_time, 
+                           (user_id, data.call_time, 
                             data.data_used,
                             data.roaming_bool
                             )
                            )
             cursor.execute("SELECT * FROM user_info WHERE email_address = ?", [data.email_address])
             print(cursor.fetchone())
-            cursor.execute("SELECT * FROM user_data WHERE id = ?", [user_id[0]])
+            cursor.execute("SELECT * FROM user_data WHERE id = ?", [user_id])
             print(cursor.fetchone())
             database.commit()
             database.close()
+    elif exists:
+        cursor.execute
+        cursor.execute("""UPDATE user_info SET call_minutes = ?, 
+                       data_gigabytes = ?, needs_roaming = ? WHERE
+                       id = ?""", [data.call_time, data.data_used, data.roaming_bool, user_id] )
+    else:
+        print("Not an instance of the Usage Details class.")
+        
+        
+def get_id(data, database_name) -> int:
+    database = sqlite3.connect(database_name)
+    cursor = database.cursor()
+    
+    if isinstance(data, UsageDetails):
+        email_address = data.email_address        
+    elif isinstance(data, tuple):
+        email_address = data[2]        
+    else:
+        print("Incompatible data type.")
+        
+    cursor.execute("SELECT id FROM user_info WHERE email_address = ?", [email_address])
+    id = cursor.fetchone()
+    print("Getting ID")
+    print(id)
+    if id:
+        return id[0]
+    else:
+        return -1
+
+def user_name_match(data, database_name, id):
+    database = sqlite3.connect(database_name)
+    cursor = database.cursor()
+    if isinstance(data, UsageDetails):
+        first_name = data.first_name
+        last_name = data.last_name
+        email_address = data.email_address
+    elif isinstance(data, tuple):
+        email_address = data[2]
+        first_name = data[0]
+        last_name = data[1]
+    else:
+        print("Not useful data type from user_name_match")
+        return
+    cursor.execute("""SELECT id FROM user_info WHERE
+                    first_name = ? AND last_name = ? AND
+                    email_address = ?""", [first_name, last_name, email_address])
+    results = cursor.fetchone()
+    if results != None:
+        print(f"from user_name_match: {results[0]}")
+    
+    
+            
