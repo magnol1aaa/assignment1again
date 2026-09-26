@@ -1,0 +1,47 @@
+[
+  {
+    "plan_name": "NetDeck",
+    "base_cost_aud": 35.4,
+    "included_minutes": "Unlimited",
+    "included_data_gb": 44,
+    "cost_per_excess_minute_aud": 0,
+    "cost_per_excess_gb_aud": 3.11,
+    "roaming": false
+  },
+  {
+    "plan_name": "StreamShift",
+    "base_cost_aud": 29.05,
+    "included_minutes": 766,
+    "included_data_gb": 37,
+    "cost_per_excess_minute_aud": 0.16,
+    "cost_per_excess_gb_aud": 3.46,
+    "roaming": true
+  },
+  {
+    "plan_name": "StreamCompare",
+    "base_cost_aud": 74.36,
+    "included_minutes": 584,
+    "included_data_gb": 42,
+    "cost_per_excess_minute_aud": 0.15,
+    "cost_per_excess_gb_aud": 2.19,
+    "roaming": false
+  },
+  {
+    "plan_name": "CallDrift",
+    "base_cost_aud": 37.61,
+    "included_minutes": 685,
+    "included_data_gb": 18,
+    "cost_per_excess_minute_aud": 0.1,
+    "cost_per_excess_gb_aud": 3.22,
+    "roaming": true
+  },
+  {
+    "plan_name": "ConnectDeck",
+    "base_cost_aud": 25.3,
+    "included_minutes": 102,
+    "included_data_gb": 19,
+    "cost_per_excess_minute_aud": 0.12,
+    "cost_per_excess_gb_aud": 2.65,
+    "roaming": false
+  }
+]

@@ -7,11 +7,13 @@ In particular it contains the utility functions and classes such as:
 - The class that defines the structure of the user data: UsageDetails.
 """
 
-from datetime import date
+import json
 import sqlite3
 import re
 
+# Configuration
 database_name = "plandata"
+plan_file_name = "plan_stats.json"
 
 
 class UsageDetails:
@@ -71,7 +73,6 @@ def user_exists(data, create) -> str:
             return "User has no data"
     elif is_user and matches_names == -1:
         return "Wrong name"
-
     elif not is_user and matches_names == -1:
         if create:
             execute_query(
@@ -80,7 +81,8 @@ def user_exists(data, create) -> str:
                 VALUES (?, ?, ?);
                 """,
                 [first_name, last_name, email_address],
-                False, True
+                False,
+                True,
             )
             return "New user"
         else:
@@ -192,22 +194,26 @@ def save_data(data, exists):
         needs_roaming) VALUES (?, ?, ?, ?)
         """
         query_data = [
-            user_id, data.call_time,
-            data.data_used, data.roaming_bool,
+            user_id,
+            data.call_time,
+            data.data_used,
+            data.roaming_bool,
         ]
         execute_query(query, query_data, False, True)
     elif exists:
         user_id = get_id(data)
-        
+
         query = """
         UPDATE user_data SET call_minutes = ?, 
         data_gigabytes = ?, needs_roaming = ? WHERE
         id = ?
         """
-          
+
         query_data = [
-            data.call_time, data.data_used,
-            data.roaming_bool, user_id
+            data.call_time,
+            data.data_used,
+            data.roaming_bool,
+            user_id,
         ]
         execute_query(query, query_data, False, True)
     else:
@@ -231,13 +237,13 @@ def user_name_match(data, id) -> int:
     first_name = data.first_name
     last_name = data.last_name
     email_address = data.email_address
-    
+
     query = """
     SELECT id FROM user_info WHERE first_name = ? AND 
     last_name = ? AND email_address = ?
     """
     query_data = [first_name, last_name, email_address]
-    
+
     results = execute_query(query, query_data, True, False)
     if results is not None:
         if results[0] == id:
@@ -285,9 +291,7 @@ def input_user_info() -> UsageDetails:
     email_address = input_email(
         "What is your email address? " "Enter email address:"
     )
-    user = UsageDetails(
-        first_name, last_name, email_address, 0, 0, False
-    )
+    user = UsageDetails(first_name, last_name, email_address, 0, 0, False)
     return user
 
 
@@ -298,3 +302,44 @@ def get_user_data(data):
     """
     query_data = [id]
     return execute_query(query, query_data, True, False)
+
+
+def get_plan_stats() -> dict:
+    with open(plan_file_name) as f:
+        data = json.load(f)
+        return data
+
+
+def calculate_costs(data, plans) -> list:
+    # id | call min | data use | roaming
+    # monthly cost = Base Cost + (Extra Minutes x Cost Per Minute) + (Extra Data x Cost per GB)
+    call_time = data[1]
+    data_used = data[2]
+    plan_costs = []
+
+    for plan in plans:
+        if data_used > plan["included_data_gb"]:
+            extra_data = data_used - plan["included_data_gb"]
+        else:
+            extra_data = 0
+        if plan["included_minutes"] == "Unlimited":
+            extra_minutes = 0
+        else:
+            if call_time > plan["included_minutes"]:
+                extra_minutes = plan["included_minutes"] - call_time
+            else:
+                extra_minutes = 0
+
+        monthly_cost = (
+            plan["base_cost_aud"]
+            + (extra_minutes * plan["cost_per_excess_minute_aud"])
+            + (extra_data * plan["cost_per_excess_gb_aud"])
+        )
+        plan_costs.append(
+            {
+                "plan_name": plan["plan_name"],
+                "monthly_cost": round(monthly_cost, 2),
+                "roaming": plan["roaming"],
+            }
+        )
+    return plan_costs
