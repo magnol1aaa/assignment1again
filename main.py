@@ -1,7 +1,6 @@
 # Imports
 
 from main_utils import (
-    UsageDetails,
     user_exists,
     input_int,
     input_bool,
@@ -24,10 +23,11 @@ Cooper Gerraty 30487791
 5. Exit
 ----------
 """
+
 # Initialize Database
 init_database()
 
-
+# Functions
 def option_one():
     """User inputs usage details, saves to file if requested."""
 
