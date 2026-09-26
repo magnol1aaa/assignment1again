@@ -114,7 +114,7 @@ def input_int(message) -> int:
 def input_email(message) -> str:
     input_valid = None
     while not input_valid:
-        email = input(message)
+        email = input(message).lower()
         if re.match("[^@]+@[^@]+\\.[^@]+", email):
             input_valid = True
             break
@@ -153,7 +153,7 @@ def input_bool(message) -> bool:
 def input_name(message) -> str:
     input_valid = None
     while not input_valid:
-        user_input = input(message)
+        user_input = input(message).lower()
         if user_input.isalpha():
             input_valid = True
         else:

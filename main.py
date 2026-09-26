@@ -117,8 +117,11 @@ def option_two():
             
         case "User has no data":
             print("you have no data, create some now.")
+            input("Press any key to return...")
+            menu_function()
         case _:
             print("This information does not match an account.")
+            input("Press any key to return...")
             menu_function()
 
 
