@@ -33,9 +33,9 @@ init_database()
 # Functions
 def option_one():
     """Option one: Display usage details"""
-    
+
     print("Enter usage details:")
-    
+
     user_data = input_user_info()
     data_update = False
     user_status = user_exists(user_data, False)
@@ -45,7 +45,7 @@ def option_one():
             print("Please enter the correct names or use a different email.")
             input("Press any key to return...")
             menu_function()
-            
+
         case "No user":
             create_account = input_bool(
                 "Would you like to create an account? Y(es) / N(o)"
@@ -113,12 +113,12 @@ def option_one():
 
 def option_two():
     """Option two: Display user data"""
-    
+
     print("Display user data")
-    
+
     user_info = input_user_info()
     user_status = user_exists(user_info, False)
-    
+
     match user_status:
         case "User has data":
             print("Here are your usage details:\n")
@@ -167,9 +167,9 @@ def option_three():
 
 def option_four():
     """Option four: Reccomend best plan"""
-    
+
     print("Reccomend best plan:")
-    
+
     user_info = input_user_info()
     user_status = user_exists(user_info, False)
     match user_status:
@@ -177,7 +177,7 @@ def option_four():
             print("you have no data, create some now.")
             input("Press any key to return...")
             menu_function()
-            
+
         case "User has data":
             user_data = get_user_data(user_info)
             plan = get_plan_stats()
@@ -197,7 +197,7 @@ def option_four():
                     lowest_plan = item
                 elif item["monthly_cost"] < lowest_plan["monthly_cost"]:
                     lowest_plan = item
-                    
+
             lowest_name = lowest_plan["plan_name"]
             lowest_cost = lowest_plan["monthly_cost"]
             print(f"\nCheapest Plan: {lowest_name}")
@@ -221,7 +221,7 @@ def menu_function(option=None):
     Args:
         option (str, optional): Used to display incorrect menu option.
     """
-    
+
     option_funcs = [
         option_one,
         option_two,
@@ -231,13 +231,13 @@ def menu_function(option=None):
     ]
 
     print(menu_string)
-    
+
     if option:
         print(f"{option} is not a valid option.")
         print("Please pick an option from 1 to 5.")
 
     input = input_int("Enter an option from 1-5:")
-    
+
     if input > 0 and input <= len(option_funcs):
         option_funcs[input - 1]()  # Call function from list
     elif input == 0:
