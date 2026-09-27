@@ -409,8 +409,15 @@ def get_plan_stats() -> list:
 
 
 def calculate_costs(data, plans) -> list:
-    # id | call min | data use | roaming
-    # monthly cost = Base Cost + (Extra Minutes x Cost Per Minute) + (Extra Data x Cost per GB)
+    """Returns the cost for each supplied plan based on user data.
+
+    Args:
+        data (list, tuple): Receives a tuple of data returned from a query.
+        plans (list, tuple): Receives a tuple of plans from a function.
+
+    Returns:
+        list: List of valid plans and their costs.
+    """
     call_time = data[1]
     data_used = data[2]
     plan_costs = []
