@@ -62,29 +62,35 @@ def user_exists(data, create) -> str:
     id = get_id(data)
     is_user = True if id != -1 else False
 
+    # Check if names match the email provided.
     matches_names = user_name_match(data, id)
+    
+    # If they are a user and their names match the email.
     if is_user and matches_names == 1:
-        does_exist = execute_query(
-            "SELECT id FROM user_data WHERE id = ?", [id], True, False
-        )
+        query = "SELECT id FROM user_data WHERE id = ?"
+        query_data = [id]
+        does_exist = execute_query(query, True, query_data, False)
+        
         if does_exist:
             return "User has data"
         else:
             return "User has no data"
+    # If they are a user but they entered non-matching names.
     elif is_user and matches_names == -1:
         return "Wrong name"
-    elif not is_user and matches_names == -1:
+    # If they aren't a user.
+    elif not is_user:
+        # Checks if the function was called to create an account.
         if create:
-            execute_query(
-                """INSERT INTO user_info
-                (first_name,last_name, email_address)
-                VALUES (?, ?, ?);
-                """,
-                [first_name, last_name, email_address],
-                False,
-                True,
-            )
+            query = """
+            INSERT INTO user_info
+            (first_name,last_name, email_address)
+            VALUES (?, ?, ?);
+            """
+            query_data = [first_name, last_name, email_address]
+            execute_query(query, False, query_data, True)
             return "New user"
+        # If an account doesn't need to be made, return no user.
         else:
             return "No user"
     else:
@@ -114,6 +120,14 @@ def input_int(message) -> int:
 
 
 def input_email(message) -> str:
+    """Ensure user inputs email address, if incorrect it repeats.
+
+    Args:
+        message (string): Message to display for input.
+
+    Returns:
+        str: Returns email address.
+    """
     input_valid = None
     while not input_valid:
         email = input(message).lower()
@@ -153,6 +167,14 @@ def input_bool(message) -> bool:
 
 
 def input_name(message) -> str:
+    """Gets user input and ensures it only contains letters.
+
+    Args:
+        message (string): Message to display for input.
+
+    Returns:
+        str: Returns the users input as a string.
+    """
     input_valid = None
     while not input_valid:
         user_input = input(message).lower()
@@ -167,6 +189,8 @@ def input_name(message) -> str:
 
 
 def init_database():
+    """Creates the database tables if they do not exist."""
+    
     user_info_query = """
     CREATE TABLE IF NOT EXISTS user_info 
     (id INTEGER PRIMARY KEY AUTOINCREMENT, 
@@ -174,6 +198,7 @@ def init_database():
     last_name TEXT NOT NULL, 
     email_address VARCHAR NOT NULL UNIQUE)
     """
+    
     user_data_query = """
     CREATE TABLE IF NOT EXISTS user_data 
     (id INTEGER REFERENCES user_info(id), 
@@ -181,25 +206,40 @@ def init_database():
     data_gigabytes INTEGER NOT NULL, 
     needs_roaming INTEGER NOT NULL)
     """
-    execute_query(user_info_query, None, False, True)
-    execute_query(user_data_query, None, False, True)
+    
+    execute_query(user_info_query, False, [], True)
+    execute_query(user_data_query, False, [], True)
 
 
 def save_data(data, exists):
+    """This function is responsible for saving data to the sqlite database.
+
+    Args:
+        data (class): Takes an instance of UsageDetails, which has user info.
+        exists (bool): This tells the function if data already exists or not.
+
+    """
+    
     if not exists:
         user_id = get_id(data)
+        # Query to execute.
         query = """
         INSERT INTO user_data
         (id, call_minutes, data_gigabytes,
         needs_roaming) VALUES (?, ?, ?, ?)
         """
+        
+        # Defining data to pass to the query.
         query_data = [
             user_id,
             data.call_time,
             data.data_used,
             data.roaming_bool,
         ]
-        execute_query(query, query_data, False, True)
+        # Execute the query, False means no return details needed.
+        # True means that we need the changes committed to the database.
+        execute_query(query, False, query_data, True)
+        
     elif exists:
         user_id = get_id(data)
 
@@ -215,17 +255,29 @@ def save_data(data, exists):
             data.roaming_bool,
             user_id,
         ]
-        execute_query(query, query_data, False, True)
+        execute_query(query, False, query_data, True)
+        
     else:
-        print("unknown parameters.")
+        print("Unknown parameters, check save function args.")
 
 
 def get_id(data) -> int:
+    """This function returns the provided email addresses user ID.
 
+    Args:
+        data (class): Takes an instance of UsageDetails, containing user info.
+
+    Returns:
+        int: Returns user ID, or -1 if the ID cannot be found.
+    """
+    
     email_address = data.email_address
+    
     query = "SELECT id FROM user_info WHERE email_address = ?"
     query_data = [email_address]
-    id = execute_query(query, query_data, True, False)
+    # Executes the query, True means it requires a return value.
+    # False means that it doesn't need to commit database changes.
+    id = execute_query(query, True, query_data, False)
 
     if id:
         return id[0]
@@ -234,6 +286,16 @@ def get_id(data) -> int:
 
 
 def user_name_match(data, id) -> int:
+    """This function checks whether the users name matches the provided email.
+
+    Args:
+        data (class): Takes an instance of UsageDetails, containing user info.
+        id (int): Takes the user ID for comparison.
+
+    Returns:
+        int: Returns user id if the names match, or -1 if they do not.
+    """
+    
     first_name = data.first_name
     last_name = data.last_name
     email_address = data.email_address
@@ -242,9 +304,10 @@ def user_name_match(data, id) -> int:
     SELECT id FROM user_info WHERE first_name = ? AND 
     last_name = ? AND email_address = ?
     """
+    
     query_data = [first_name, last_name, email_address]
 
-    results = execute_query(query, query_data, True, False)
+    results = execute_query(query, True, query_data, False)
     if results is not None:
         if results[0] == id:
             return 1
@@ -254,13 +317,28 @@ def user_name_match(data, id) -> int:
         return -1
 
 
-def execute_query(query, data, need_return, commit):
+def execute_query(query, need_return=False, data=[], commit=False):
+    """Executes supplied queries and returns or commits changes if required.
+
+    Args:
+        query (string): The string containing the query.
+        need_return (bool): Whether data must be returned, default false.
+        data (dict): The data of the query, can be empty.
+        commit (bool): If data changes need to be committed, default false.
+
+    Returns:
+        result: If need_return is true it returns the results.
+    """
+    # Connect to the database
     database = sqlite3.connect(database_name)
     cursor = database.cursor()
+    
     if not data:
         cursor.execute(query)
     elif data:
         cursor.execute(query, data)
+    
+    # If user needs return or not, and whether to commit.
     if need_return:
         result = cursor.fetchall()
         if not result:
@@ -277,34 +355,51 @@ def execute_query(query, data, need_return, commit):
         if commit:
             database.commit()
             database.close()
-            return
-    print("No path followed.")
-    database.close()
-    return
+            return 
 
 
 def input_user_info() -> UsageDetails:
-    first_name = input_name("What is your first name? " "Enter first name: ")
+    """Gets user name and email address, returns as UsageDetails instance.
 
-    last_name = input_name("What is your last name? " "Enter last name: ")
+    Returns:
+        UsageDetails: Class containing only the users name and email.
+    """
+    first_name = input_name("What is your first name? Enter first name: ")
+
+    last_name = input_name("What is your last name? Enter last name: ")
 
     email_address = input_email(
-        "What is your email address? " "Enter email address:"
+        "What is your email address? " "Enter email address: "
     )
+    # Plan info is left empty, they're not saved until user enters usage data.
     user = UsageDetails(first_name, last_name, email_address, 0, 0, False)
     return user
 
 
 def get_user_data(data):
+    """Gets user data from their ID.
+    Args:
+        data (class): Requires user's UsageDetails instance to get their ID.
+    Returns:
+        tuple: Returns users data as as tuple.
+    """
     id = get_id(data)
+    
     query = """
     SELECT * from user_data WHERE id = ?
     """
     query_data = [id]
-    return execute_query(query, query_data, True, False)
+
+    to_return = execute_query(query, True, query_data, False)
+    return to_return
 
 
-def get_plan_stats() -> dict:
+def get_plan_stats() -> list:
+    """Retrieves the details from the json file containing all the plans.
+
+    Returns:
+        list: List containing every available plan.
+    """
     with open(plan_file_name) as f:
         data = json.load(f)
         return data
@@ -342,4 +437,5 @@ def calculate_costs(data, plans) -> list:
                 "roaming": plan["roaming"],
             }
         )
+        
     return plan_costs

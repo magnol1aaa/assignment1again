@@ -13,6 +13,7 @@ from main_utils import (
 )
 
 # Vars
+welcome_message = "Welcome to the Mobile Data Plan Advisor."
 menu_string = """
 ---------
 Mobile Data Plan Advisor
@@ -29,18 +30,23 @@ Cooper Gerraty 30487791
 # Initialize Database
 init_database()
 
+# Print welcome string
+print(welcome_message)
 
 # Functions
 def option_one():
     """Option one: Display usage details"""
 
-    print("Enter usage details:")
+    print("Enter usage details: ")
 
+    
     user_data = input_user_info()
     data_update = False
+    # Check if user exists
     user_status = user_exists(user_data, False)
     match user_status:
         case "Wrong name":
+            # If they input an existing email but not the matching names
             print("A user already exists with this email.")
             print("Please enter the correct names or use a different email.")
             input("Press any key to return...")
@@ -51,6 +57,9 @@ def option_one():
                 "Would you like to create an account? Y(es) / N(o)"
             )
             if create_account:
+                # User exists func also handles creation.
+                # The boolean flag defines whether an account is made or not -
+                # If an account is not found.
                 user_status = user_exists(user_data, True)
                 if user_status == "New user":
                     print("Account created.")
@@ -63,18 +72,22 @@ def option_one():
                 menu_function()
 
         case "User has data":
+            # If user exists and has data
             overwrite = input_bool(
                 "You already have data saved, overwrite it? " "Y(es) / N(o): "
             )
             if overwrite:
+                # Flag that data must be updated, not inserted.
                 data_update = True
             else:
                 input("Press any key to return...")
                 menu_function()
 
         case "User has no data":
+            # If they have no data we just pass and continue with data entry
             pass
-
+    
+    # Retrieve plan data
     call_time = input_int(
         "How many call minutes do you typically use a month? "
         "Enter a number: "
@@ -90,6 +103,7 @@ def option_one():
         "Y(es) / N(o): "
     )
 
+    # Update the user_data class with the info
     user_data.call_time = call_time
     user_data.data_used = data_use
     user_data.roaming_bool = roaming_bool
@@ -100,7 +114,7 @@ def option_one():
 
     if not save_bool:
         menu_function()
-
+    # If the update flag is True, it updates the data instead of inserting.
     if data_update:
         save_data(user_data, True)
         print("Your data has been saved.")
@@ -116,11 +130,13 @@ def option_two():
 
     print("Display user data")
 
+    # Get user info and check if user exists
     user_info = input_user_info()
     user_status = user_exists(user_info, False)
 
     match user_status:
         case "User has data":
+            # Print their usage details.
             print("Here are your usage details:\n")
             user_data = get_user_data(user_info)
             roaming = "Yes" if user_data[3] == 1 else "No"
@@ -131,10 +147,11 @@ def option_two():
             menu_function()
 
         case "User has no data":
-            print("you have no data, create some now.")
+            print("You have no data saved, enter some in option 1.")
             input("Press any key to return...")
             menu_function()
         case _:
+            # This case occurs if the data does not match.
             print("This information does not match an account.")
             input("Press any key to return...")
             menu_function()
@@ -142,17 +159,27 @@ def option_two():
 
 def option_three():
     print("Display plan costs:")
+    
     user_info = input_user_info()
     user_status = user_exists(user_info, False)
+    
     match user_status:
         case "User has no data":
-            print("you have no data, create some now.")
+            print("You have no data saved, enter some in option 1.")
             input("Press any key to return...")
             menu_function()
         case "User has data":
+            print("\nAvailable plan data:")
+            # get_user_data retrieves user data from their info.
             user_data = get_user_data(user_info)
+            
+            # retrieves the available plans from the json file.
             plan = get_plan_stats()
+            
+            # calculate costs based on data retrieved from user_data.
             plan_costs = calculate_costs(user_data, plan)
+            
+            # print each calculated plan cost
             for item in plan_costs:
                 name = item["plan_name"]
                 cost = item["monthly_cost"]
@@ -172,6 +199,7 @@ def option_four():
 
     user_info = input_user_info()
     user_status = user_exists(user_info, False)
+    
     match user_status:
         case "User has no data":
             print("you have no data, create some now.")
@@ -179,29 +207,37 @@ def option_four():
             menu_function()
 
         case "User has data":
+            # Get user data, available plans and their costs.
             user_data = get_user_data(user_info)
-            plan = get_plan_stats()
-            plan_costs = calculate_costs(user_data, plan)
+            plans = get_plan_stats()
+            plan_costs = calculate_costs(user_data, plans)
+            
             valid_plans = []
             lowest_plan = {}
+            
+            # Iterate through plans and append applicable plans for the user.
             for item in plan_costs:
+                # This checks if the plan supports roaming.
+                # Then checks if the user needs roaming.
                 if item["roaming"] and user_data[3] == 1:
                     valid_plans.append(item)
                 elif user_data[3] == 0:
                     valid_plans.append(item)
                 else:
                     pass
-
+                
+            # Iterate through applicable plans and find the cheapest one.           
             for item in valid_plans:
                 if not lowest_plan:
                     lowest_plan = item
                 elif item["monthly_cost"] < lowest_plan["monthly_cost"]:
                     lowest_plan = item
-
+            
             lowest_name = lowest_plan["plan_name"]
             lowest_cost = lowest_plan["monthly_cost"]
             print(f"\nCheapest Plan: {lowest_name}")
             print(f"Monthly Cost: {lowest_cost}")
+            
             input("\nPress any key to return...")
             menu_function()
 
