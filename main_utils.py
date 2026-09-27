@@ -350,7 +350,10 @@ def execute_query(query, need_return=False, data=[], commit=False):
             if commit:
                 database.commit()
                 database.close()
-            return result[0]
+            if len(result) <= 1:
+                return result[0]
+            else:
+                return result
     elif not need_return:
         if commit:
             database.commit()
@@ -439,3 +442,65 @@ def calculate_costs(data, plans) -> list:
         )
         
     return plan_costs
+
+
+def fun_statistics(data) -> str:
+    query = """
+    SELECT call_minutes, data_gigabytes, needs_roaming FROM user_data
+    """
+    all_data = execute_query(query, True)
+    
+    if len(all_data) <= 1:
+        return "You're the only user, stats will show when there's more users."
+    
+    call_usage = 0
+    data_usage = 0
+    plan_count = 0
+    roaming_percent = 0
+    roaming_needs = []
+    
+    for item in all_data:
+        call_usage += int(item[0])
+        data_usage += (item[1])
+        roaming_needs.append(item[2])
+        plan_count += 1
+    
+    # User usages:
+    user_call = data[1]
+    user_data = data[2]
+    
+    # Calculate mean usages.
+    call_usage = call_usage / plan_count
+    data_usage = data_usage / plan_count
+    
+    # Store if above or below average.
+    above_call = False
+    above_data = False
+    
+    # Calculate how many people need roaming.
+    roaming_percent = round((roaming_needs.count(True) / plan_count) * 100)
+    
+    # Compare user data to mean usage and generate a rounded percentage.
+    if user_call <= call_usage:
+        compare_call = round((user_call / call_usage) * 100)
+    else:
+        compare_call = round(((user_call - call_usage) / call_usage) * 100)
+        above_call = True
+    if user_data <= data_usage:
+        compare_data = round((user_data / data_usage) * 100)
+    else:
+        compare_data = round(((user_data - data_usage) / data_usage) * 100)
+        above_data = True
+    
+    # Decide what strings are appropriate to return for each option.
+    if above_call:
+        call_string = f"You use {compare_call}% more minutes than average!"
+    else:
+        call_string = f"You use {compare_call}% less minutes than average!"
+    if above_data:
+        data_string = f"You use {compare_data}% more data than average!"
+    else:
+        data_string = f"You use {compare_data}% less data than average!"
+    bool_string = f"{roaming_percent}% of users use roaming!"
+    
+    return f"{call_string}\n{data_string}\n{bool_string}"

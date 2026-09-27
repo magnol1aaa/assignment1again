@@ -10,6 +10,7 @@ from main_utils import (
     get_user_data,
     get_plan_stats,
     calculate_costs,
+    fun_statistics
 )
 
 # Vars
@@ -142,7 +143,8 @@ def option_two():
             roaming = "Yes" if user_data[3] == 1 else "No"
             print(f"Call Minutes: {user_data[1]}")
             print(f"Gigabytes Used: {user_data[2]}")
-            print(f"Roaming Required: {roaming}")
+            print(f"Roaming Required: {roaming}\n")
+            print(fun_statistics(user_data))
             input("\nPress any key to return...")
             menu_function()
 
